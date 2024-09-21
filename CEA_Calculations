@@ -1,0 +1,130 @@
+import React, { useState } from 'react';
+
+const GreenhouseLightingCalculator = () => {
+  const [inputs, setInputs] = useState({
+    lightOutput: 1000,
+    powerConsumption: 600,
+    costPerFixture: 350,
+    targetPPFD: 225,
+    greenhouseWidth: 25,
+    greenhouseLength: 40,
+    electricityCost: 0.12,
+    hoursPerYear: 2400
+  });
+
+  const [results, setResults] = useState(null);
+
+  const handleInputChange = (e) => {
+    setInputs({
+      ...inputs,
+      [e.target.name]: parseFloat(e.target.value)
+    });
+  };
+
+  const calculateResults = () => {
+    const {
+      lightOutput,
+      powerConsumption,
+      costPerFixture,
+      targetPPFD,
+      greenhouseWidth,
+      greenhouseLength,
+      electricityCost,
+      hoursPerYear
+    } = inputs;
+
+    const areaLighting = greenhouseWidth * greenhouseLength;
+    const wallPlugEfficacyUmolJ = lightOutput / powerConsumption;
+    const wallPlugEfficacyMolKwh = wallPlugEfficacyUmolJ * 3.6;
+    const coverageArea = lightOutput / targetPPFD;
+    const fixturesRequired = Math.ceil(areaLighting / coverageArea);
+    const purchaseCost = fixturesRequired * costPerFixture;
+    const annualElectricityCost = (fixturesRequired * powerConsumption * hoursPerYear * electricityCost) / 1000;
+
+    const fixturesPerRow = Math.ceil(Math.sqrt(fixturesRequired * greenhouseWidth / greenhouseLength));
+    const fixturesPerColumn = Math.ceil(fixturesRequired / fixturesPerRow);
+
+    setResults({
+      areaLighting,
+      wallPlugEfficacyUmolJ,
+      wallPlugEfficacyMolKwh,
+      coverageArea,
+      fixturesRequired,
+      purchaseCost,
+      annualElectricityCost,
+      fixturesPerRow,
+      fixturesPerColumn
+    });
+  };
+
+  const GreenhouseVisualization = ({ width, length, fixturesPerRow, fixturesPerColumn }) => {
+    const scale = 400 / Math.max(width, length);
+    const scaledWidth = width * scale;
+    const scaledLength = length * scale;
+
+    return (
+      <svg width={scaledWidth} height={scaledLength} viewBox={`0 0 ${scaledWidth} ${scaledLength}`}>
+        <rect width={scaledWidth} height={scaledLength} fill="none" stroke="black" />
+        {[...Array(fixturesPerRow)].map((_, rowIndex) =>
+          [...Array(fixturesPerColumn)].map((_, colIndex) => (
+            <circle
+              key={`${rowIndex}-${colIndex}`}
+              cx={((rowIndex + 0.5) * scaledWidth) / fixturesPerRow}
+              cy={((colIndex + 0.5) * scaledLength) / fixturesPerColumn}
+              r={3}
+              fill="yellow"
+              stroke="orange"
+            />
+          ))
+        )}
+      </svg>
+    );
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto p-4">
+      <h2 className="text-2xl font-bold mb-4">Greenhouse Lighting Calculator</h2>
+      <div className="space-y-4">
+        {Object.entries(inputs).map(([key, value]) => (
+          <div key={key} className="flex items-center">
+            <label htmlFor={key} className="w-1/3">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}:</label>
+            <input
+              id={key}
+              type="number"
+              name={key}
+              value={value}
+              onChange={handleInputChange}
+              placeholder={key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+              className="w-2/3 p-2 border rounded"
+            />
+          </div>
+        ))}
+        <button onClick={calculateResults} className="bg-blue-500 text-white px-4 py-2 rounded">Calculate</button>
+      </div>
+
+      {results && (
+        <div className="mt-8 space-y-4">
+          <h3 className="text-xl font-semibold">Results:</h3>
+          {Object.entries(results).map(([key, value]) => (
+            <p key={key}>{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}: {typeof value === 'number' ? value.toFixed(2) : value}</p>
+          ))}
+          
+          <div>
+            <h4 className="text-lg font-semibold">Greenhouse Layout:</h4>
+            <GreenhouseVisualization
+              width={inputs.greenhouseWidth}
+              length={inputs.greenhouseLength}
+              fixturesPerRow={results.fixturesPerRow}
+              fixturesPerColumn={results.fixturesPerColumn}
+            />
+            <p className="text-sm text-gray-600 mt-2">
+              Each yellow dot represents a lighting fixture. The layout shows an approximate distribution of {results.fixturesRequired} fixtures.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default GreenhouseLightingCalculator;
